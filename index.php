@@ -12,16 +12,20 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if(isset($q)){    
     $attr = explode('/', $q);
+    $type = $attr[0] ?? null;
+    $params = $attr[1] ?? null;
     switch($method){
         case 'GET':
-            switch($attr[0]){
+            switch($type){
                 case 'Questions':
-                    if($attr[1] == 'All'){
+                    if($params == 'All'){
                         echo json_encode(getQuestionsAll());
-                    } else if($attr[1] == 'MostAnswered'){
+                    } elseif($params == 'Count'){
+                        echo json_encode(getQuestionsCount());
+                    } elseif($params == 'MostAnswered'){
                         echo json_encode(getQuestionsMostAnswered());
-                    } else if(gettype($attr[1]) == 'string'){
-                        $temp = getQuestionsAnswers($attr[1]);
+                    } elseif(gettype($params) == 'string'){
+                        $temp = getQuestions($params);
                         if(isset($temp)){
                             echo json_encode($temp);
                         }
@@ -36,19 +40,48 @@ if(isset($q)){
                     }                       
                 break;
             case 'Answers':
+                if($params == 'Count'){
+                    echo json_encode(getAnswersCount($attr[2]));
+                } elseif(gettype($params) == 'string') {
+                    $temp = getAnswers($params);
+                    if(isset($temp)){
+                        echo json_encode($temp);
+                    }
+                    else{
+                        http_response_code(404);
+                        die(json_encode(['message' => 'Not Found']));
+                    }
+                }
                 break;
-            case 'Count':
+            case 'Users':
+                if($params == 'Count'){
+                    echo json_encode(getUsersCount());
+                } elseif(gettype($params) == 'string') {
+                    $temp = getUsers($params);
+                    if(isset($temp)){
+                        echo json_encode($temp);
+                    }
+                    else{
+                        http_response_code(404);
+                        die(json_encode(['message' => 'Not Found']));
+                    }
+                }
+                else{
+                    http_response_code(400);
+                    die(json_encode(['message' => 'Bad Request']));
+                }
                 break;
             case 'Help':
-                break;
+                echo json_encode(getHelp());
+                break;            
             default:
                 http_response_code(400);
                 die(json_encode(['message' => 'Bad Request']));
             }
             break;
         case 'POST':
-            switch($attr[0]){
-                case 'User':
+            switch($type){
+                case 'Users':
                     echo json_encode(setUser());
                     break;
                 case 'Questions':
@@ -63,15 +96,31 @@ if(isset($q)){
             }
             break;
         case 'PATCH':
+            $params = json_decode(file_get_contents('php://input'), true);
+            switch($type){
+                case 'Users':
+                    echo json_encode(updateUser($params, $params['AdminToken'] ?? null));
+                    break;
+                case 'Questions':
+                    echo json_encode(updateQuestion($params, $params['AdminToken'] ?? null));
+                    break;
+                case 'Answers':
+                    echo json_encode(updateAnswer($params, $params['AdminToken'] ?? null));
+                    break;
+                default:
+                    http_response_code(400);
+                    die(json_encode(['message' => 'Bad Request']));
+                }
             break;
         case 'DELETE':
             break;
         default:
+            die($type.'\n'.$params);
             http_response_code(400);
             die(json_encode(['message' => 'Bad Request']));
     }
 }
-else{
+else {
     http_response_code(400);
     die(json_encode(['message' => 'Bad Request']));
 }
